@@ -150,7 +150,7 @@ duplicarFavoritas (Cancion tc pl) = if esFavorita tc
 -- ul l (Cons y ys) = ul (ul l (Cons y Nil)) ys
 -----------------------------------------
 -- up :: Playlist -> Playlist -> Playlist
--- up pl PlylistVacia 	  = pl
+-- up pl PlaylistVacia 	  = pl
 -- up pl (Cancion tc pl2) = up (up pl (agregar tc PlaylistVacia)) pl2
 
 unirPlaylists :: Playlist -> Playlist -> Playlist   -- SUBFUNCION --
@@ -183,33 +183,57 @@ data Carrito = Producto Categoria Carrito | CarritoVacio
 -- Implementar las siguientes funciones:
 
 -------------------------------------------------------------------------------------------------
-contarCategoria :: Categoria -> Carrito -> Int
 -- Cuenta cuántos productos pertenecen a cierta categoría.
 
--------------------------------------------------------------------------------------------------
-agregarProducto :: Categoria -> Carrito -> Carrito
---Agrega un producto al carrito.
+esMismaCategoria :: Categoria -> Categoria -> Bool
+esMismaCategoria Alimento Alimento 				   = True
+esMismaCategoria Limpieza Limpieza 				   = True
+esMismaCategoria Electrodomestico Electrodomestico = True
+esMismaCategoria _ _							   = False
+
+contarCategoria :: Categoria -> Carrito -> Int
+contarCategoria cat (Producto catp car) = if esMismaCategoria cat catp
+											then 1 + (contarCategoria cat car)
+											else contarCategoria cat car
 
 -------------------------------------------------------------------------------------------------
-quitarProducto :: Categoria -> Carrito -> Carrito
+--Agrega un producto al carrito.
+agregarProducto :: Categoria -> Carrito -> Carrito
+agregarProducto cat car = Producto cat car
+
+-------------------------------------------------------------------------------------------------
 -- Quita un producto de la categoría indicada.
 -- La función debe quitar solamente el primero que encuentre.
+quitarProducto :: Categoria -> Carrito -> Carrito
+quitarProducto cat CarritoVacio = CarritoVacio
+quitarProducto cat (Producto catp car) = if (esMismaCategoria cat catp)
+											then car
+											else agregarProducto catp (quitarProducto cat car))
 
 -------------------------------------------------------------------------------------------------
-vaciarCategoria :: Categoria -> Carrito -> Carrito
 -- Elimina todos los productos de una categoría determinada.
 -- Ejemplo:
 -- vaciarCategoria Limpieza carrito
 -- elimina todos los productos de limpieza.
+vaciarCategoria :: Categoria -> Carrito -> Carrito
+vaciarCategoria cat CarritoVacio = CarritoVacio
+vaciarCategoria cat (Producto catp car) = if (esMismaCategoria cat catp)
+											then vaciarCategoria cat car
+											else agregarProducto catp (vaciarCategoria cat)
 
 --------------------------------------------------------------------------------------------------
-hayProductos :: Carrito -> Bool
 -- Indica si el carrito contiene al menos un producto.
+hayProductos :: Carrito -> Bool
+hayProducto CarritoVacio = False
+hayProducto _			 = True
 
 --------------------------------------------------------------------------------------------------
-mezclarCarritos :: Carrito -> Carrito -> Carrito
 -- Combina dos carritos en uno solo.
 -- Importante: conservar todos los productos de ambos carritos.
+mezclarCarritos :: Carrito -> Carrito -> Carrito
+mezclarCarritos car CarritoVacio = car
+mezclarCarritos car1 (Producto cat car2) = 
+					mezclarCarritos (mezclarCarritos car1 (agregarProducto cat CarritoVacio)) car2
 
 ---------------------------------------------------------------------------------------------------
 -- 4. Historial de mensajes
@@ -223,26 +247,56 @@ data Chat = Mensaje EstadoMensaje Chat | ChatVacio
 -- Implementar las siguientes funciones:
 
 ----------------------------------------------------------------------------------------------------
-contarMensajes :: EstadoMensaje -> Chat -> Int
 -- Cuenta cuántos mensajes tienen cierto estado.
 
-----------------------------------------------------------------------------------------------------
-recibirMensaje :: EstadoMensaje -> Chat -> Chat
--- Agrega un mensaje nuevo al chat.
+esMismoEstado :: EstadoMensaje -> EstadoMensaje -> Bool
+esMismoEstado Leido Leido	  = True
+esMismoEstado NoLeido NoLeido = True
+esMismoEstado _ _			  = False
+
+contarMensajes :: EstadoMensaje -> Chat -> Int
+contarMensajes em ChatVacio 		 = 0
+contarMensajes em (Mensaje emc chat) = if esMismoEstado
+										then 1 + (contarMensajes em chat)
+										else contarMensajes em chat
 
 ----------------------------------------------------------------------------------------------------
-leerMensaje :: Chat -> Chat
+-- Agrega un mensaje nuevo al chat.
+recibirMensaje :: EstadoMensaje -> Chat -> Chat
+recibirMensaje em chat = Mensaje em chat
+
+----------------------------------------------------------------------------------------------------
 -- Marca como leído el primer mensaje no leído que aparezca.
 -- Si todos están leídos, el chat permanece igual.
 
-----------------------------------------------------------------------------------------------------
-marcarTodos :: Chat -> Chat
--- Marca todos los mensajes como leídos.
+estaLeido :: EstadoMensaje -> Bool
+estadoLeido Leido   = True
+estadoLeido NoLeido	= False
 
+leerMensaje :: Chat -> Chat
+leerMensaje ChatVacio 		   = ChatVacio
+leerMensaje (Mensaje em chat) = if estaLeido em
+								   then recibirMensaje em (leerMensajes chat)
+								   else recibirMensaje Leido chat
+
+----------------------------------------------------------------------------------------------------
+-- Marca todos los mensajes como leídos.
+marcarTodos :: Chat -> Chat
+marcarTodos ChatVacio 		   = ChatVacio
+marcarTodos (Mensaje em chat) = recibirMensaje Leido (marcarTodos chat)
+								   
 -----------------------------------------------------------------------------------------------------
-hayNoLeidos :: Chat -> Bool
 -- Indica si existe al menos un mensaje sin leer.
+hayNoLeidos :: Chat -> Bool
+hayNoLeidos ChatVacio 		  = False
+hayNoLeidos (Mensaje em chat) = if estadoLeido em
+								  then hayNoLeidos chat
+								  else True
 
 ------------------------------------------------------------------------------------------------------
-borrarLeidos :: Chat -> Chat
 -- Elimina todos los mensajes ya leídos del historial.
+borrarLeidos :: Chat -> Chat
+borrarLeidos ChatVacio 		   = ChatVacio
+borrarLeidos (Mensaje em chat) = if estadoLeido em
+									then borrarLeidos chat
+									else recibirMensaje em (borrarLeidos chat)
